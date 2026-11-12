@@ -1,0 +1,3136 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>محاكي برنامج شوت كت | Shotcut Simulator</title>
+  <style>
+    /* Reset & Global Dark Theme Variables */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    :root {
+      --bg-main: #181818;
+      --bg-panel: #232323;
+      --bg-panel-header: #2c2c2c;
+      --bg-track: #1b1b1b;
+      --bg-clip-v: #2a5d8f;
+      --bg-clip-v-active: #3b7bb8;
+      --bg-clip-a: #2e7d32;
+      --bg-clip-a-active: #388e3c;
+      --border-color: #383838;
+      --border-highlight: #ff9800;
+      --text-main: #dfdfdf;
+      --text-muted: #9e9e9e;
+      --accent: #ff9800;
+      --accent-blue: #0288d1;
+      --accent-hover: #ffa726;
+      --playhead-color: #f44336;
+      --danger: #e53935;
+      --success: #4caf50;
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Cairo", "Tahoma", sans-serif;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      font-size: 13px;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1a1a1a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #3a3a3a;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #4f4f4f;
+    }
+
+    /* Top Toolbar */
+    .toolbar {
+      height: 42px;
+      background: linear-gradient(180deg, #333333 0%, #252525 100%);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      gap: 6px;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    .app-brand {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding-left: 12px;
+      border-left: 1px solid var(--border-color);
+      font-weight: bold;
+      color: #fff;
+    }
+    .app-brand .badge {
+      background: var(--accent);
+      color: #000;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    .tb-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #2b2b2b;
+      color: var(--text-main);
+      border: 1px solid #404040;
+      border-radius: 3px;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.15s ease;
+    }
+    .tb-btn:hover {
+      background: #3a3a3a;
+      border-color: #555;
+      color: #fff;
+    }
+    .tb-btn:active {
+      background: #222;
+    }
+    .tb-btn.active {
+      background: #3b5066;
+      border-color: var(--accent-blue);
+      color: #fff;
+    }
+    .tb-btn svg {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+    }
+    .tb-btn.highlight {
+      background: #805b10;
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: bold;
+    }
+    .tb-btn.highlight:hover {
+      background: #9c6e13;
+    }
+
+    .tb-divider {
+      width: 1px;
+      height: 24px;
+      background: #3c3c3c;
+      margin: 0 2px;
+    }
+
+    /* Main Workspace Layout */
+    .workspace {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* Upper Stage: Panels + Preview Player */
+    .stage-upper {
+      flex: 5.5;
+      display: flex;
+      min-height: 0;
+      border-bottom: 3px solid #111;
+      position: relative;
+    }
+
+    /* Panels Container */
+    .panel-container {
+      width: 380px;
+      background: var(--bg-panel);
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .panel-tabs {
+      display: flex;
+      background: var(--bg-panel-header);
+      border-bottom: 1px solid var(--border-color);
+    }
+    .panel-tab {
+      flex: 1;
+      text-align: center;
+      padding: 8px 10px;
+      cursor: pointer;
+      font-weight: 500;
+      border-bottom: 2px solid transparent;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+    .panel-tab:hover {
+      background: #333;
+      color: #fff;
+    }
+    .panel-tab.active {
+      color: var(--accent);
+      border-bottom: 2px solid var(--accent);
+      background: var(--bg-panel);
+    }
+
+    .panel-body {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      padding: 8px;
+      overflow-y: auto;
+      min-height: 0;
+    }
+    .panel-body.active {
+      display: flex;
+    }
+
+    /* Playlist Panel */
+    .playlist-actions {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .playlist-items {
+      flex: 1;
+      overflow-y: auto;
+      border: 1px solid var(--border-color);
+      background: #1c1c1c;
+      border-radius: 3px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 4px;
+    }
+    .drop-hint {
+      text-align: center;
+      padding: 24px 12px;
+      color: #666;
+      border: 2px dashed #333;
+      border-radius: 4px;
+      margin: 10px;
+      cursor: pointer;
+    }
+    .drop-hint:hover {
+      border-color: var(--accent);
+      color: #888;
+    }
+    .playlist-card {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px;
+      background: #252525;
+      border: 1px solid #333;
+      border-radius: 3px;
+      cursor: grab;
+      transition: background 0.15s;
+    }
+    .playlist-card:hover {
+      background: #303030;
+      border-color: #444;
+    }
+    .playlist-card.selected {
+      border-color: var(--accent);
+      background: #363025;
+    }
+    .playlist-thumb {
+      width: 48px;
+      height: 32px;
+      background: #111;
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: #777;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .playlist-thumb img, .playlist-thumb video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .playlist-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .playlist-info .name {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 12px;
+      color: #eee;
+    }
+    .playlist-info .duration {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .playlist-card .add-to-tl {
+      padding: 2px 6px;
+      font-size: 11px;
+      background: #383838;
+      border: 1px solid #4a4a4a;
+      border-radius: 2px;
+      cursor: pointer;
+      color: #fff;
+    }
+    .playlist-card .add-to-tl:hover {
+      background: var(--accent);
+      color: #000;
+    }
+
+    /* Filters Panel */
+    .filters-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .filters-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .filter-card {
+      background: #1e1e1e;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 8px;
+    }
+    .filter-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-weight: bold;
+      color: #ddd;
+    }
+    .filter-control-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 6px;
+    }
+    .filter-control-row label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .filter-control-row input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+    .filter-control-row input[type="text"], .filter-control-row input[type="color"] {
+      background: #141414;
+      border: 1px solid #333;
+      padding: 4px 6px;
+      color: #fff;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+
+    /* Player / Preview Area */
+    .player-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #121212;
+      position: relative;
+      min-width: 0;
+    }
+    .player-header {
+      height: 30px;
+      background: #1e1e1e;
+      border-bottom: 1px solid #2a2a2a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      color: #aaa;
+      font-size: 11px;
+    }
+    .player-canvas-wrap {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      overflow: hidden;
+      background-image: 
+        radial-gradient(#1e1e1e 10%, transparent 11%),
+        radial-gradient(#1e1e1e 10%, transparent 11%);
+      background-size: 16px 16px;
+      background-position: 0 0, 8px 8px;
+    }
+    #previewCanvas {
+      background: #000;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+      border: 1px solid #282828;
+      max-width: 100%;
+      max-height: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: contain;
+    }
+    .player-controls {
+      height: 48px;
+      background: #1f1f1f;
+      border-top: 1px solid #2d2d2d;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      gap: 12px;
+    }
+    .play-buttons {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .play-btn {
+      background: #2b2b2b;
+      border: 1px solid #3d3d3d;
+      color: #ddd;
+      width: 32px;
+      height: 32px;
+      border-radius: 3px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .play-btn:hover {
+      background: #3b3b3b;
+      color: #fff;
+      border-color: #555;
+    }
+    .play-btn.primary {
+      background: #325070;
+      border-color: var(--accent-blue);
+      color: #fff;
+    }
+    .play-btn.primary:hover {
+      background: #416892;
+    }
+    .timecode-display {
+      font-family: monospace;
+      font-size: 15px;
+      background: #101010;
+      border: 1px solid #333;
+      padding: 4px 12px;
+      border-radius: 3px;
+      color: #00e676;
+      letter-spacing: 1px;
+    }
+    .playback-speed {
+      font-size: 11px;
+      color: #888;
+    }
+
+    /* Lower Stage: Timeline */
+    .stage-timeline {
+      flex: 4.5;
+      background: #1e1e1e;
+      display: flex;
+      flex-direction: column;
+      min-height: 180px;
+      position: relative;
+    }
+    .timeline-toolbar {
+      height: 34px;
+      background: #252525;
+      border-bottom: 1px solid #313131;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+    }
+    .tl-tools {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tl-btn {
+      background: #2f2f2f;
+      border: 1px solid #424242;
+      color: #ddd;
+      padding: 3px 8px;
+      font-size: 11px;
+      border-radius: 3px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .tl-btn:hover {
+      background: #3d3d3d;
+      color: #fff;
+      border-color: #555;
+    }
+    .tl-btn.danger:hover {
+      background: var(--danger);
+      border-color: var(--danger);
+    }
+    .timeline-zoom-ctrl {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #999;
+      font-size: 11px;
+    }
+    .timeline-zoom-ctrl input {
+      width: 100px;
+      accent-color: var(--accent);
+    }
+
+    /* Ruler and Tracks Viewport */
+    .timeline-viewport {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-x: auto;
+      overflow-y: auto;
+      position: relative;
+      background: #151515;
+    }
+    .timeline-ruler-track-wrapper {
+      position: relative;
+      min-width: 100%;
+      width: max-content;
+    }
+
+    /* Time Ruler */
+    .timeline-ruler {
+      height: 24px;
+      background: #202020;
+      border-bottom: 1px solid #383838;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      cursor: pointer;
+    }
+    .ruler-canvas {
+      display: block;
+      height: 100%;
+      width: 100%;
+    }
+
+    /* Playhead Indicator */
+    .playhead {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--playhead-color);
+      z-index: 20;
+      pointer-events: none;
+      transform: translateX(-50%);
+    }
+    .playhead-head {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 12px;
+      height: 14px;
+      background: var(--playhead-color);
+      clip-path: polygon(0 0, 100% 0, 100% 60%, 50% 100%, 0 60%);
+      cursor: ew-resize;
+      pointer-events: all;
+    }
+
+    /* Tracks */
+    .tracks-container {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding-top: 4px;
+      padding-bottom: 20px;
+    }
+    .track-row {
+      display: flex;
+      height: 52px;
+      background: #1e1e1e;
+      border-bottom: 1px solid #282828;
+    }
+    .track-header {
+      width: 120px;
+      background: #272727;
+      border-left: 1px solid #363636;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 0 8px;
+      flex-shrink: 0;
+      position: sticky;
+      right: 0;
+      z-index: 4;
+      box-shadow: -2px 0 5px rgba(0,0,0,0.3);
+    }
+    .track-title {
+      font-weight: bold;
+      font-size: 12px;
+      color: #ddd;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .track-type-badge {
+      font-size: 9px;
+      padding: 1px 4px;
+      border-radius: 2px;
+      background: #3a3a3a;
+      color: #aaa;
+    }
+    .track-lane {
+      flex: 1;
+      height: 100%;
+      position: relative;
+      background: #191919;
+      background-image: repeating-linear-gradient(90deg, #222 0, #222 1px, transparent 1px, transparent 50px);
+    }
+
+    /* Clips on Lane */
+    .clip-item {
+      position: absolute;
+      top: 3px;
+      height: 46px;
+      background: var(--bg-clip-v);
+      border: 1px solid #4a8cd1;
+      border-radius: 3px;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 3px 6px;
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+      overflow: hidden;
+      transition: border-color 0.1s;
+    }
+    .clip-item.audio-clip {
+      background: var(--bg-clip-a);
+      border-color: #4caf50;
+    }
+    .clip-item.selected {
+      border: 2px solid var(--accent);
+      box-shadow: 0 0 8px rgba(255, 152, 0, 0.6);
+    }
+    .clip-title {
+      font-size: 11px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      pointer-events: none;
+    }
+    .clip-waveform {
+      height: 14px;
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      opacity: 0.6;
+      pointer-events: none;
+    }
+    .clip-waveform span {
+      background: #fff;
+      width: 2px;
+      border-radius: 1px;
+    }
+    .clip-trim-handle {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      cursor: ew-resize;
+      z-index: 2;
+    }
+    .clip-trim-handle:hover {
+      background: var(--accent);
+    }
+    .clip-trim-left {
+      right: 0; /* RTL: right is beginning */
+      border-top-right-radius: 2px;
+      border-bottom-right-radius: 2px;
+    }
+    .clip-trim-right {
+      left: 0; /* RTL: left is end */
+      border-top-left-radius: 2px;
+      border-bottom-left-radius: 2px;
+    }
+
+    /* Modal dialog (Export / Lab Tasks) */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      backdrop-filter: blur(2px);
+    }
+    .modal-overlay.show {
+      display: flex;
+    }
+    .modal-card {
+      background: #252525;
+      border: 1px solid #444;
+      border-radius: 5px;
+      width: 480px;
+      max-width: 90vw;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalFadeIn 0.2s ease-out;
+    }
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .modal-header {
+      background: #2e2e2e;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #383838;
+      font-size: 14px;
+      font-weight: bold;
+      color: #fff;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      color: #aaa;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .modal-close:hover {
+      color: #fff;
+    }
+    .modal-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .form-group label {
+      font-size: 12px;
+      color: #bbb;
+    }
+    .form-group select, .form-group input {
+      background: #171717;
+      border: 1px solid #404040;
+      padding: 6px 10px;
+      color: #fff;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+
+    /* Training Lab Sidebar/Modal Drawer */
+    .lab-drawer {
+      position: fixed;
+      top: 42px;
+      left: 0;
+      width: 340px;
+      bottom: 0;
+      background: #202020;
+      border-right: 1px solid var(--border-color);
+      box-shadow: 4px 0 16px rgba(0,0,0,0.5);
+      z-index: 50;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    .lab-drawer.open {
+      transform: translateX(0);
+    }
+    .lab-drawer-header {
+      padding: 12px;
+      background: #292929;
+      border-bottom: 1px solid #383838;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .lab-tasks-list {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .lab-task-item {
+      background: #272727;
+      border: 1px solid #363636;
+      border-radius: 4px;
+      padding: 10px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      transition: all 0.2s;
+    }
+    .lab-task-item.completed {
+      border-color: #2e7d32;
+      background: #1d2d1f;
+    }
+    .task-status-icon {
+      font-size: 16px;
+      margin-top: 1px;
+    }
+    .task-content h4 {
+      font-size: 12px;
+      margin-bottom: 3px;
+      color: #fff;
+    }
+    .task-content p {
+      font-size: 11px;
+      color: #aaa;
+      line-height: 1.4;
+    }
+
+    /* Progress bar */
+    .progress-bar-wrap {
+      width: 100%;
+      height: 12px;
+      background: #111;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-top: 8px;
+      display: none;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent));
+      transition: width 0.1s linear;
+    }
+
+    /* Utility */
+    .btn-action {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      padding: 7px 14px;
+      border-radius: 3px;
+      font-weight: bold;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-action:hover {
+      background: var(--accent-hover);
+    }
+    .btn-secondary {
+      background: #333;
+      color: #fff;
+      border: 1px solid #444;
+      padding: 7px 14px;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    .btn-secondary:hover {
+      background: #444;
+    }
+    .notification-toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #323232;
+      color: #fff;
+      padding: 10px 16px;
+      border-right: 4px solid var(--accent);
+      border-radius: 3px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      z-index: 1000;
+      display: none;
+      font-size: 12px;
+      animation: toastFade 0.3s ease;
+    }
+    @keyframes toastFade {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Toolbar -->
+  <header class="toolbar">
+    <div class="app-brand">
+      <span>شوت كت</span>
+      <span class="badge">Shotcut التدريبي</span>
+    </div>
+
+    <!-- Hidden file inputs -->
+    <input type="file" id="fileInput" accept="video/*,audio/*,image/*" multiple style="display: none;">
+    <button class="tb-btn" id="btnOpenFile" title="فتح ملف محلي من جهازك">
+      <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+      <span>فتح ملف (Open)</span>
+    </button>
+
+    <button class="tb-btn" id="btnSaveProject" title="حفظ المشروع محلياً">
+      <svg viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+      <span>حفظ المشروع (Save)</span>
+    </button>
+
+    <div class="tb-divider"></div>
+
+    <button class="tb-btn" id="btnUndo" title="تراجع (Ctrl+Z)">
+      <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C20.91 11.23 17.06 8 12.5 8z"/></svg>
+      <span>تراجع (Undo)</span>
+    </button>
+
+    <div class="tb-divider"></div>
+
+    <button class="tb-btn active" id="btnTogglePlaylist">
+      <span>قائمة التشغيل (Playlist)</span>
+    </button>
+
+    <button class="tb-btn" id="btnToggleFilters">
+      <span>الفلاتر (Filters)</span>
+    </button>
+
+    <button class="tb-btn" id="btnExportModal">
+      <svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>
+      <span>تصدير (Export)</span>
+    </button>
+
+    <div style="flex: 1;"></div>
+
+    <!-- Training Lab Mode Button -->
+    <button class="tb-btn highlight" id="btnToggleLab">
+      <span>📋 مهام التدريب (Lab Tasks)</span>
+      <span id="labBadge" style="background:#fff; color:#000; border-radius:10px; padding:1px 6px; font-size:10px; margin-right:4px;">0/5</span>
+    </button>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="workspace">
+    <!-- Upper Stage: Panels + Player -->
+    <section class="stage-upper">
+      
+      <!-- Collapsible / Switchable Panels -->
+      <aside class="panel-container" id="sidePanel">
+        <div class="panel-tabs">
+          <div class="panel-tab active" data-tab="playlistTab">قائمة التشغيل (Playlist)</div>
+          <div class="panel-tab" data-tab="filtersTab">الفلاتر (Filters)</div>
+        </div>
+
+        <!-- Playlist Panel -->
+        <div class="panel-body active" id="playlistTab">
+          <div class="playlist-actions">
+            <button class="tb-btn" id="btnAddSampleVideo" style="flex: 1;" title="إدراج فيديو تجريبي جاهز">
+              + فيديو تجريبي
+            </button>
+            <button class="tb-btn" id="btnAddSampleImage" style="flex: 1;" title="إدراج صورة تعليمية تجريبية">
+              + صورة تجريبية
+            </button>
+            <button class="tb-btn" id="btnClearPlaylist" title="تفريغ القائمة">مسح</button>
+          </div>
+          <div class="playlist-items" id="playlistContainer">
+            <div class="drop-hint" id="playlistDropZone">
+              اسحب وأفلت ملفات الفيديو، الصور، أو الصوت هنا<br>
+              أو انقر هنا لاستعراض الملفات من جهازك
+            </div>
+          </div>
+        </div>
+
+        <!-- Filters Panel -->
+        <div class="panel-body" id="filtersTab">
+          <div class="filters-header">
+            <span id="selectedClipLabel" style="color: var(--accent); font-weight:bold;">لا يوجد مقطع محدد</span>
+            <select id="selectNewFilter" class="tb-btn" style="padding: 2px 6px;">
+              <option value="">+ إضافة فلتر...</option>
+              <option value="text">نص بسيط (Text: Simple)</option>
+              <option value="brightness">السطوع (Brightness)</option>
+              <option value="contrast">التباين (Contrast)</option>
+              <option value="grayscale">التدرج الرمادي (Grayscale)</option>
+              <option value="fade">تلاشي (Fade In / Out)</option>
+              <option value="hue-rotate">تدرج الألوان (Hue Rotate)</option>
+              <option value="sepia">مرشح البني الداكن (Sepia)</option>
+              <option value="transition">تأثير انتقالي (Slide Transition)</option>
+            </select>
+          </div>
+          <div class="filters-list" id="filtersContainer">
+            <div style="color: #777; text-align: center; margin-top: 30px;">
+              حدد مقطعاً في الخط الزمني (Timeline) لتعديل أو إضافة الفلاتر عليه.
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Player Window -->
+      <section class="player-area">
+        <div class="player-header">
+          <span>المعاينة الحية (Live Program Preview)</span>
+          <span id="playerResolution">1920x1080 (16:9)</span>
+        </div>
+        <div class="player-canvas-wrap" id="canvasWrapper">
+          <canvas id="previewCanvas" width="960" height="540"></canvas>
+        </div>
+        <div class="player-controls">
+          <div class="play-buttons">
+            <button class="play-btn" id="btnGoStart" title="الانتقال للبداية (Home)">⏮</button>
+            <button class="play-btn" id="btnStepBack" title="إطار للخلف (Left Arrow)">◀</button>
+            <button class="play-btn primary" id="btnPlayPause" title="تشغيل / إيقاف (Space)">▶</button>
+            <button class="play-btn" id="btnStepForward" title="إطار للأمام (Right Arrow)">▶</button>
+            <button class="play-btn" id="btnGoEnd" title="الانتقال للنهاية (End)">⏭</button>
+          </div>
+
+          <div class="timecode-display" id="timecodeDisplay">00:00:00:00</div>
+
+          <div class="playback-speed">
+            <span>السرعة: 1.0x</span>
+          </div>
+        </div>
+      </section>
+
+    </section>
+
+    <!-- Lower Stage: Timeline -->
+    <section class="stage-timeline">
+      <div class="timeline-toolbar">
+        <div class="tl-tools">
+          <button class="tl-btn" id="tlBtnAddTrack" title="إضافة مقطع محدد للخط الزمني">
+            <span>+ إضافة للخط الزمني</span>
+          </button>
+          <button class="tl-btn" id="tlBtnSplit" title="تقسيم المقطع عند رأس القراءة (اختصار: S)">
+            <span>✂ تقسيم (Split - S)</span>
+          </button>
+          <button class="tl-btn danger" id="tlBtnDelete" title="حذف المقطع المحدد (Delete)">
+            <span>🗑 حذف (Delete)</span>
+          </button>
+        </div>
+        <div class="timeline-zoom-ctrl">
+          <span>تكبير العرض:</span>
+          <input type="range" id="tlZoomSlider" min="10" max="150" value="50">
+        </div>
+      </div>
+
+      <div class="timeline-viewport" id="timelineViewport">
+        <div class="timeline-ruler-track-wrapper" id="timelineWrapper">
+          <!-- Ruler -->
+          <div class="timeline-ruler" id="timelineRuler">
+            <canvas class="ruler-canvas" id="rulerCanvas"></canvas>
+          </div>
+
+          <!-- Playhead -->
+          <div class="playhead" id="playheadLine" style="right: 120px;">
+            <div class="playhead-head" id="playheadHandle"></div>
+          </div>
+
+          <!-- Tracks -->
+          <div class="tracks-container" id="tracksContainer">
+            <!-- V2 Track (Overlay / Text) -->
+            <div class="track-row" data-track-id="V2">
+              <div class="track-header">
+                <div class="track-title">
+                  <span>مسار V2</span>
+                  <span class="track-type-badge">فيديو/نص</span>
+                </div>
+              </div>
+              <div class="track-lane" data-track-id="V2"></div>
+            </div>
+
+            <!-- V1 Track (Main Video) -->
+            <div class="track-row" data-track-id="V1">
+              <div class="track-header">
+                <div class="track-title">
+                  <span>مسار V1</span>
+                  <span class="track-type-badge">فيديو رئيسي</span>
+                </div>
+              </div>
+              <div class="track-lane" data-track-id="V1"></div>
+            </div>
+
+            <!-- A1 Track (Audio) -->
+            <div class="track-row" data-track-id="A1">
+              <div class="track-header">
+                <div class="track-title">
+                  <span>مسار A1</span>
+                  <span class="track-type-badge">صوت فقط</span>
+                </div>
+              </div>
+              <div class="track-lane" data-track-id="A1"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Training Lab Drawer -->
+  <aside class="lab-drawer" id="labDrawer">
+    <div class="lab-drawer-header">
+      <h3 style="color:var(--accent); font-size:14px;">🎯 قائمة مهام التدريب العملي</h3>
+      <button class="modal-close" id="btnCloseLab">&times;</button>
+    </div>
+    <div class="lab-tasks-list">
+      <div class="lab-task-item" id="task1">
+        <div class="task-status-icon">⚪</div>
+        <div class="task-content">
+          <h4>1. استيراد ملف إلى قائمة التشغيل</h4>
+          <p>قم بفتح ملف فيديو/صورة من جهازك عبر زر "فتح ملف" أو انقر على "+ إضافة فيديو تعليمي تجريبي".</p>
+        </div>
+      </div>
+
+      <div class="lab-task-item" id="task2">
+        <div class="task-status-icon">⚪</div>
+        <div class="task-content">
+          <h4>2. إضافة مقطع إلى المسار V1</h4>
+          <p>اسحب المقطع من قائمة التشغيل وضعه على مسار الفيديو V1 في الخط الزمني أو انقر على زر (+ إضافة).</p>
+        </div>
+      </div>
+
+      <div class="lab-task-item" id="task3">
+        <div class="task-status-icon">⚪</div>
+        <div class="task-content">
+          <h4>3. شطر وتقسيم المقطع (Split)</h4>
+          <p>حرك رأس القراءة الأحمر إلى منتصف المقطع في الخط الزمني، ثم اضغط زر "تقسيم" أو اضغط حرف (S) من لوحة المفاتيح.</p>
+        </div>
+      </div>
+
+      <div class="lab-task-item" id="task4">
+        <div class="task-status-icon">⚪</div>
+        <div class="task-content">
+          <h4>4. إضافة فلتر للمقطع</h4>
+          <p>حدد أحد المقاطع في الخط الزمني، وانتقل لتبويب "الفلاتر"، ثم أضف أي فلتر (نص، سطوع، تباين، إلخ).</p>
+        </div>
+      </div>
+
+      <div class="lab-task-item" id="task5">
+        <div class="task-status-icon">⚪</div>
+        <div class="task-content">
+          <h4>5. تصدير المشروع النهائي</h4>
+          <p>انقر على زر "تصدير (Export)" في الشريط العلوي وقم ببدء عملية الرندرة وتصدير الفيديو بنجاح.</p>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Export Modal -->
+  <div class="modal-overlay" id="exportModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span>تصدير الفيديو (Export Video)</span>
+        <button class="modal-close" id="btnCloseExport">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>صيغة التصدير (Format):</label>
+          <select id="exportFormat">
+            <option value="mp4">MP4 (H.264 / AAC) - متوافق قياسياً</option>
+            <option value="webm">WebM (VP9 / Opus)</option>
+            <option value="avi">AVI (Uncompressed)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>الدقة وجودة الإخراج (Resolution):</label>
+          <select id="exportResolution">
+            <option value="1080">Full HD (1920x1080) - 1080p</option>
+            <option value="720">HD (1280x720) - 720p</option>
+            <option value="480">SD (854x480) - 480p</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>معدل الإطارات (Frame Rate):</label>
+          <select id="exportFps">
+            <option value="30">30 إطار/ثانية (30 fps)</option>
+            <option value="60">60 إطار/ثانية (60 fps)</option>
+            <option value="24">24 إطار/ثانية (Cinematic 24 fps)</option>
+          </select>
+        </div>
+
+        <div class="progress-bar-wrap" id="exportProgressWrap">
+          <div class="progress-bar-fill" id="exportProgressBar"></div>
+        </div>
+        <div id="exportStatusText" style="font-size:11px; color:#aaa; text-align:center;"></div>
+
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
+          <button class="btn-secondary" id="btnCancelExport">إلغاء</button>
+          <button class="btn-action" id="btnStartExport">تصدير الملف الآن 🚀</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div class="notification-toast" id="toast"></div>
+
+  <!-- Hidden elements for media decoding & rendering -->
+  <div id="mediaPool" style="display: none;"></div>
+
+  <script>
+    /* ==========================================================================
+       SHOTCUT SIMULATOR CORE JAVASCRIPT
+       Complete offline, single-file interactive implementation
+       ========================================================================== */
+
+    // Global Text Drag, Resize & Selection Bounding
+    let currentTextBounds = null;
+    let isDraggingText = false;
+    let isResizingText = false;
+    let activeResizeHandle = null;
+    let textDragOffset = { x: 0, y: 0 };
+    let initialResizeState = null;
+
+    // Global Application State
+    const state = {
+      playlist: [],        // { id, name, type, duration, url, element }
+      tracks: {
+        V2: [],            // clips on V2: { id, mediaId, name, start, duration, inPoint, filters: [] }
+        V1: [],            // clips on V1
+        A1: []             // clips on A1
+      },
+      selectedClipId: null,
+      selectedTrackId: null,
+      currentTime: 0,      // in seconds
+      isPlaying: false,
+      pixelsPerSecond: 50, // zoom level
+      fps: 30,
+      totalDuration: 60,   // timeline view length
+      history: [],
+      lab: {
+        importedFile: false,
+        addedToTimeline: false,
+        splitClip: false,
+        addedFilter: false,
+        exportedProject: false
+      }
+    };
+
+    // DOM Elements Cache
+    const el = {
+      fileInput: document.getElementById('fileInput'),
+      btnOpenFile: document.getElementById('btnOpenFile'),
+      btnSaveProject: document.getElementById('btnSaveProject'),
+      btnUndo: document.getElementById('btnUndo'),
+      btnTogglePlaylist: document.getElementById('btnTogglePlaylist'),
+      btnToggleFilters: document.getElementById('btnToggleFilters'),
+      btnExportModal: document.getElementById('btnExportModal'),
+      btnToggleLab: document.getElementById('btnToggleLab'),
+      btnCloseLab: document.getElementById('btnCloseLab'),
+      labBadge: document.getElementById('labBadge'),
+      labDrawer: document.getElementById('labDrawer'),
+      sidePanel: document.getElementById('sidePanel'),
+      playlistTab: document.getElementById('playlistTab'),
+      filtersTab: document.getElementById('filtersTab'),
+      panelTabs: document.querySelectorAll('.panel-tab'),
+      playlistContainer: document.getElementById('playlistContainer'),
+      playlistDropZone: document.getElementById('playlistDropZone'),
+      btnAddSampleVideo: document.getElementById('btnAddSampleVideo'),
+      btnAddSampleImage: document.getElementById('btnAddSampleImage'),
+      btnClearPlaylist: document.getElementById('btnClearPlaylist'),
+      previewCanvas: document.getElementById('previewCanvas'),
+      timecodeDisplay: document.getElementById('timecodeDisplay'),
+      btnPlayPause: document.getElementById('btnPlayPause'),
+      btnGoStart: document.getElementById('btnGoStart'),
+      btnGoEnd: document.getElementById('btnGoEnd'),
+      btnStepBack: document.getElementById('btnStepBack'),
+      btnStepForward: document.getElementById('btnStepForward'),
+      timelineViewport: document.getElementById('timelineViewport'),
+      timelineWrapper: document.getElementById('timelineWrapper'),
+      timelineRuler: document.getElementById('timelineRuler'),
+      rulerCanvas: document.getElementById('rulerCanvas'),
+      playheadLine: document.getElementById('playheadLine'),
+      playheadHandle: document.getElementById('playheadHandle'),
+      tlZoomSlider: document.getElementById('tlZoomSlider'),
+      tlBtnAddTrack: document.getElementById('tlBtnAddTrack'),
+      tlBtnSplit: document.getElementById('tlBtnSplit'),
+      tlBtnDelete: document.getElementById('tlBtnDelete'),
+      exportModal: document.getElementById('exportModal'),
+      btnCloseExport: document.getElementById('btnCloseExport'),
+      btnCancelExport: document.getElementById('btnCancelExport'),
+      btnStartExport: document.getElementById('btnStartExport'),
+      exportProgressWrap: document.getElementById('exportProgressWrap'),
+      exportProgressBar: document.getElementById('exportProgressBar'),
+      exportStatusText: document.getElementById('exportStatusText'),
+      selectedClipLabel: document.getElementById('selectedClipLabel'),
+      selectNewFilter: document.getElementById('selectNewFilter'),
+      filtersContainer: document.getElementById('filtersContainer'),
+      mediaPool: document.getElementById('mediaPool'),
+      toast: document.getElementById('toast'),
+      tracksContainer: document.getElementById('tracksContainer')
+    };
+
+    const ctx = el.previewCanvas.getContext('2d');
+    const rulerCtx = el.rulerCanvas.getContext('2d');
+
+    // Utility: Format Time to 00:00:00:00 (Hours:Minutes:Seconds:Frames)
+    function formatTimecode(sec, fps = 30) {
+      if (isNaN(sec) || sec < 0) sec = 0;
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = Math.floor(sec % 60);
+      const f = Math.floor((sec % 1) * fps);
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}:${String(f).padStart(2, '0')}`;
+    }
+
+    // Show Notification Toast
+    function showToast(msg, duration = 3000) {
+      el.toast.textContent = msg;
+      el.toast.style.display = 'block';
+      setTimeout(() => {
+        el.toast.style.display = 'none';
+      }, duration);
+    }
+
+    // Save state snapshot for Undo
+    function pushHistory() {
+      const snapshot = JSON.stringify({
+        tracks: state.tracks,
+        currentTime: state.currentTime
+      });
+      state.history.push(snapshot);
+      if (state.history.length > 30) state.history.shift();
+    }
+
+    function undo() {
+      if (state.history.length === 0) {
+        showToast("لا توجد إجراءات سابقة للتراجع عنها");
+        return;
+      }
+      const prev = JSON.parse(state.history.pop());
+      state.tracks = prev.tracks;
+      state.currentTime = prev.currentTime;
+      renderAllTimelineClips();
+      updatePlayheadUI();
+      renderCurrentFrame();
+      renderFiltersPanel();
+      showToast("تم التراجع عن آخر إجراء (Undo)");
+    }
+
+    // Check Lab Tasks completion
+    function checkLabGoals() {
+      const tasks = [
+        { id: 'task1', done: state.lab.importedFile },
+        { id: 'task2', done: state.lab.addedToTimeline },
+        { id: 'task3', done: state.lab.splitClip },
+        { id: 'task4', done: state.lab.addedFilter },
+        { id: 'task5', done: state.lab.exportedProject }
+      ];
+
+      let completedCount = 0;
+      tasks.forEach(t => {
+        const item = document.getElementById(t.id);
+        if (item) {
+          const icon = item.querySelector('.task-status-icon');
+          if (t.done) {
+            item.classList.add('completed');
+            icon.textContent = '✅';
+            completedCount++;
+          } else {
+            item.classList.remove('completed');
+            icon.textContent = '⚪';
+          }
+        }
+      });
+
+      el.labBadge.textContent = `${completedCount}/5`;
+      if (completedCount === 5 && !state.lab.congratulated) {
+        state.lab.congratulated = true;
+        showToast("🎉 ممتاز! لقد أتممت جميع مهام التدريب بنجاح!");
+      }
+    }
+
+    /* ==========================================================================
+       MEDIA MANAGEMENT & PLAYLIST
+       ========================================================================== */
+
+    // Create a synthesized canvas demo video stream for schools without video files
+    function createDemoVideo() {
+      const demoCanvas = document.createElement('canvas');
+      demoCanvas.width = 640;
+      demoCanvas.height = 360;
+      const dCtx = demoCanvas.getContext('2d');
+      let angle = 0;
+
+      function drawDemo() {
+        // Background gradient
+        const grad = dCtx.createLinearGradient(0, 0, demoCanvas.width, demoCanvas.height);
+        grad.addColorStop(0, '#1a2a6c');
+        grad.addColorStop(0.5, '#b21f1f');
+        grad.addColorStop(1, '#fdbb2d');
+        dCtx.fillStyle = grad;
+        dCtx.fillRect(0, 0, demoCanvas.width, demoCanvas.height);
+
+        // Animated circles
+        dCtx.save();
+        dCtx.translate(demoCanvas.width / 2, demoCanvas.height / 2);
+        dCtx.rotate(angle);
+        dCtx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+        dCtx.beginPath();
+        dCtx.arc(100, 0, 35, 0, Math.PI * 2);
+        dCtx.fill();
+
+        dCtx.fillStyle = '#00e676';
+        dCtx.beginPath();
+        dCtx.arc(-100, 0, 25, 0, Math.PI * 2);
+        dCtx.fill();
+        dCtx.restore();
+
+        // Overlay Text
+        dCtx.fillStyle = '#ffffff';
+        dCtx.font = 'bold 26px sans-serif';
+        dCtx.textAlign = 'center';
+        dCtx.fillText('فيديو تجريبي - شوت كت التعليمي', demoCanvas.width / 2, demoCanvas.height / 2 - 20);
+        dCtx.font = '16px monospace';
+        dCtx.fillText('SHOTCUT LAB SAMPLE VIDEO (10s)', demoCanvas.width / 2, demoCanvas.height / 2 + 25);
+
+        angle += 0.04;
+        requestAnimationFrame(drawDemo);
+      }
+      drawDemo();
+
+      // Convert canvas to media stream if supported, else image representation
+      const videoEl = document.createElement('video');
+      videoEl.muted = true;
+      videoEl.loop = true;
+      videoEl.autoplay = true;
+      videoEl.playsInline = true;
+
+      try {
+        const stream = demoCanvas.captureStream(30);
+        videoEl.srcObject = stream;
+        videoEl.play();
+      } catch (e) {
+        console.warn('captureStream not available, fallback to canvas element');
+      }
+
+      return {
+        id: 'media_' + Date.now(),
+        name: 'فيديو_تجريبي_شوت_كت.mp4',
+        type: 'video',
+        duration: 10,
+        element: videoEl,
+        canvasFallback: demoCanvas,
+        url: ''
+      };
+    }
+
+    // Create a synthesized demo image
+    function createDemoImage() {
+      const imgCanvas = document.createElement('canvas');
+      imgCanvas.width = 960;
+      imgCanvas.height = 540;
+      const iCtx = imgCanvas.getContext('2d');
+
+      // Beautiful scenic gradient background
+      const grad = iCtx.createLinearGradient(0, 0, 0, imgCanvas.height);
+      grad.addColorStop(0, '#1d2671');
+      grad.addColorStop(0.5, '#c33764');
+      grad.addColorStop(1, '#ff9900');
+      iCtx.fillStyle = grad;
+      iCtx.fillRect(0, 0, imgCanvas.width, imgCanvas.height);
+
+      // Sun
+      iCtx.fillStyle = '#fffa65';
+      iCtx.beginPath();
+      iCtx.arc(480, 260, 90, 0, Math.PI * 2);
+      iCtx.fill();
+
+      // Mountains silhouette
+      iCtx.fillStyle = '#111322';
+      iCtx.beginPath();
+      iCtx.moveTo(0, 540);
+      iCtx.lineTo(200, 320);
+      iCtx.lineTo(380, 440);
+      iCtx.lineTo(580, 290);
+      iCtx.lineTo(780, 430);
+      iCtx.lineTo(960, 330);
+      iCtx.lineTo(960, 540);
+      iCtx.closePath();
+      iCtx.fill();
+
+      // Label text
+      iCtx.fillStyle = '#ffffff';
+      iCtx.font = 'bold 34px "Cairo", sans-serif';
+      iCtx.textAlign = 'center';
+      iCtx.fillText('صورة تجريبية - معمل شوت كت', 480, 100);
+      iCtx.font = '20px monospace';
+      iCtx.fillStyle = '#f5f5f5';
+      iCtx.fillText('SHOTCUT SAMPLE IMAGE (5 SECONDS)', 480, 145);
+
+      const img = new Image();
+      img.src = imgCanvas.toDataURL('image/png');
+
+      return {
+        id: 'media_' + Date.now(),
+        name: 'صورة_طبيعية_تجريبية.png',
+        type: 'image',
+        duration: 5,
+        element: img,
+        url: img.src
+      };
+    }
+
+    // Add Media Item to State & UI
+    function addMediaToPlaylist(mediaObj) {
+      state.playlist.push(mediaObj);
+      state.lab.importedFile = true;
+      checkLabGoals();
+
+      renderPlaylist();
+      showToast(`تم استيراد الملف: ${mediaObj.name}`);
+    }
+
+    // Process Imported Files from input or drag-drop
+    function handleFileImport(files) {
+      if (!files || files.length === 0) return;
+
+      Array.from(files).forEach(file => {
+        const isVideo = file.type.startsWith('video');
+        const isImage = file.type.startsWith('image');
+        const isAudio = file.type.startsWith('audio');
+        const fileUrl = URL.createObjectURL(file);
+
+        if (isVideo) {
+          const video = document.createElement('video');
+          video.preload = 'metadata';
+          video.src = fileUrl;
+          video.muted = true;
+          video.playsInline = true;
+
+          video.onloadedmetadata = () => {
+            const dur = video.duration && !isNaN(video.duration) ? video.duration : 10;
+            addMediaToPlaylist({
+              id: 'media_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+              name: file.name,
+              type: 'video',
+              duration: dur,
+              element: video,
+              url: fileUrl
+            });
+          };
+        } else if (isImage) {
+          const img = new Image();
+          img.src = fileUrl;
+          img.onload = () => {
+            addMediaToPlaylist({
+              id: 'media_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+              name: file.name,
+              type: 'image',
+              duration: 5, // Default image duration on timeline
+              element: img,
+              url: fileUrl
+            });
+          };
+        } else if (isAudio) {
+          const audio = document.createElement('audio');
+          audio.src = fileUrl;
+          audio.onloadedmetadata = () => {
+            const dur = audio.duration && !isNaN(audio.duration) ? audio.duration : 10;
+            addMediaToPlaylist({
+              id: 'media_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+              name: file.name,
+              type: 'audio',
+              duration: dur,
+              element: audio,
+              url: fileUrl
+            });
+          };
+        } else {
+          showToast(`عذراً، نوع الملف غير مدعوم: ${file.name}`);
+        }
+      });
+    }
+
+    // Render Playlist UI
+    function renderPlaylist() {
+      // Clear all except drophint
+      el.playlistContainer.innerHTML = '';
+      if (state.playlist.length === 0) {
+        el.playlistContainer.appendChild(el.playlistDropZone);
+        return;
+      }
+
+      state.playlist.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = 'playlist-card';
+        card.draggable = true;
+        card.dataset.mediaId = item.id;
+
+        // Thumbnail
+        let thumbHtml = '<span>FILE</span>';
+        if (item.type === 'video') thumbHtml = '<span>▶ فيديو</span>';
+        else if (item.type === 'image') thumbHtml = '<span>🖼 صورة</span>';
+        else if (item.type === 'audio') thumbHtml = '<span>🎵 صوت</span>';
+
+        card.innerHTML = `
+          <div class="playlist-thumb">${thumbHtml}</div>
+          <div class="playlist-info">
+            <div class="name" title="${item.name}">${item.name}</div>
+            <div class="duration">${formatTimecode(item.duration).substring(3)} (${item.type})</div>
+          </div>
+          <button class="add-to-tl" title="إضافة للخط الزمني">+ إضافة</button>
+        `;
+
+        // Double click or button to add directly to timeline V1
+        card.querySelector('.add-to-tl').addEventListener('click', (e) => {
+          e.stopPropagation();
+          addClipToTrack(item.id, item.type === 'audio' ? 'A1' : 'V1');
+        });
+
+        card.addEventListener('dblclick', () => {
+          addClipToTrack(item.id, item.type === 'audio' ? 'A1' : 'V1');
+        });
+
+        // Drag to timeline setup
+        card.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', item.id);
+        });
+
+        el.playlistContainer.appendChild(card);
+      });
+    }
+
+    /* ==========================================================================
+       TIMELINE ENGINE & CLIPS MANAGEMENT
+       ========================================================================== */
+
+    // Add clip to specific track
+    function addClipToTrack(mediaId, trackId = 'V1', startTime = null) {
+      const media = state.playlist.find(m => m.id === mediaId);
+      if (!media) return;
+
+      pushHistory();
+
+      const track = state.tracks[trackId];
+      // Calculate start time: either provided or right after the last clip on that track
+      let start = startTime;
+      if (start === null) {
+        if (track.length > 0) {
+          const lastClip = track[track.length - 1];
+          start = lastClip.start + lastClip.duration;
+        } else {
+          start = state.currentTime;
+        }
+      }
+
+      const clipId = 'clip_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+      const newClip = {
+        id: clipId,
+        mediaId: media.id,
+        name: media.name,
+        type: media.type,
+        start: Math.max(0, start),
+        duration: media.duration,
+        inPoint: 0,
+        filters: []
+      };
+
+      track.push(newClip);
+      selectClip(clipId, trackId);
+      renderAllTimelineClips();
+
+      state.lab.addedToTimeline = true;
+      checkLabGoals();
+
+      showToast(`تمت إضافة المقطع إلى المسار (${trackId})`);
+    }
+
+    // Split currently selected clip at playhead
+    function splitCurrentClip() {
+      if (!state.selectedClipId || !state.selectedTrackId) {
+        showToast("يرجى تحديد مقطع في الخط الزمني أولاً لشطره!");
+        return;
+      }
+
+      const track = state.tracks[state.selectedTrackId];
+      const clipIndex = track.findIndex(c => c.id === state.selectedClipId);
+      if (clipIndex === -1) return;
+
+      const clip = track[clipIndex];
+      const playhead = state.currentTime;
+
+      // Check if playhead is strictly inside the clip
+      if (playhead <= clip.start + 0.05 || playhead >= (clip.start + clip.duration - 0.05)) {
+        showToast("ضع رأس القراءة الأحمر داخل المقطع لتنفيذ الشطر (Split)");
+        return;
+      }
+
+      pushHistory();
+
+      const firstPartDuration = playhead - clip.start;
+      const secondPartDuration = clip.duration - firstPartDuration;
+
+      // Update current clip to become the first part
+      clip.duration = firstPartDuration;
+
+      // Create second clip
+      const secondClip = {
+        id: 'clip_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+        mediaId: clip.mediaId,
+        name: clip.name + ' (جزء 2)',
+        type: clip.type,
+        start: playhead,
+        duration: secondPartDuration,
+        inPoint: clip.inPoint + firstPartDuration,
+        filters: JSON.parse(JSON.stringify(clip.filters)) // copy filters
+      };
+
+      track.splice(clipIndex + 1, 0, secondClip);
+
+      // Select the new split part
+      selectClip(secondClip.id, state.selectedTrackId);
+      renderAllTimelineClips();
+
+      state.lab.splitClip = true;
+      checkLabGoals();
+
+      showToast("تم تقسيم المقطع بنجاح ✂");
+    }
+
+    // Delete selected clip
+    function deleteCurrentClip() {
+      if (!state.selectedClipId || !state.selectedTrackId) return;
+
+      pushHistory();
+      const track = state.tracks[state.selectedTrackId];
+      state.tracks[state.selectedTrackId] = track.filter(c => c.id !== state.selectedClipId);
+
+      state.selectedClipId = null;
+      state.selectedTrackId = null;
+
+      renderAllTimelineClips();
+      renderFiltersPanel();
+      renderCurrentFrame();
+      showToast("تم حذف المقطع");
+    }
+
+    // Select a clip in timeline and jump playhead into it to preview immediately
+    function selectClip(clipId, trackId) {
+      state.selectedClipId = clipId;
+      state.selectedTrackId = trackId;
+
+      // Update UI classes
+      document.querySelectorAll('.clip-item').forEach(el => {
+        el.classList.toggle('selected', el.dataset.clipId === clipId);
+      });
+
+      // Jump playhead directly into the clip so it displays on canvas preview right away
+      const targetClip = (state.tracks[trackId] || []).find(c => c.id === clipId);
+      if (targetClip) {
+        if (state.currentTime < targetClip.start || state.currentTime >= (targetClip.start + targetClip.duration)) {
+          state.currentTime = targetClip.start;
+          updatePlayheadUI();
+        }
+      }
+
+      renderFiltersPanel();
+      renderCurrentFrame();
+    }
+
+    // Render clips on all timeline tracks
+    function renderAllTimelineClips() {
+      // Find max duration to extend timeline canvas/ruler
+      let maxTime = 60;
+      Object.keys(state.tracks).forEach(trackId => {
+        state.tracks[trackId].forEach(clip => {
+          if (clip.start + clip.duration > maxTime) {
+            maxTime = clip.start + clip.duration + 20;
+          }
+        });
+      });
+      state.totalDuration = Math.max(60, maxTime);
+
+      // Update wrapper width
+      const totalPixelWidth = 120 + (state.totalDuration * state.pixelsPerSecond);
+      el.timelineWrapper.style.width = totalPixelWidth + 'px';
+
+      renderRuler();
+
+      // Render each track lane
+      ['V2', 'V1', 'A1'].forEach(trackId => {
+        const lane = document.querySelector(`.track-lane[data-track-id="${trackId}"]`);
+        lane.innerHTML = '';
+
+        state.tracks[trackId].forEach(clip => {
+          const clipEl = document.createElement('div');
+          clipEl.className = 'clip-item' + (clip.type === 'audio' ? ' audio-clip' : '');
+          if (clip.id === state.selectedClipId) clipEl.classList.add('selected');
+          clipEl.dataset.clipId = clip.id;
+          clipEl.dataset.trackId = trackId;
+
+          // Position in RTL: right offset corresponds to time * pps
+          const rightOffset = clip.start * state.pixelsPerSecond;
+          const width = Math.max(15, clip.duration * state.pixelsPerSecond);
+
+          clipEl.style.right = rightOffset + 'px';
+          clipEl.style.width = width + 'px';
+
+          // Decorative audio waveforms or video strip
+          let extraVisual = '';
+          if (clip.type === 'audio') {
+            extraVisual = `
+              <div class="clip-waveform">
+                <span style="height:40%"></span><span style="height:70%"></span>
+                <span style="height:100%"></span><span style="height:60%"></span>
+                <span style="height:85%"></span><span style="height:35%"></span>
+                <span style="height:90%"></span><span style="height:50%"></span>
+              </div>
+            `;
+          }
+
+          clipEl.innerHTML = `
+            <div class="clip-trim-handle clip-trim-left" title="قص وتعديل البداية"></div>
+            <div class="clip-title">${clip.name}</div>
+            ${extraVisual}
+            <div class="clip-trim-handle clip-trim-right" title="قص وتعديل النهاية"></div>
+          `;
+
+          // Clip selection
+          clipEl.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('clip-trim-handle')) return;
+            selectClip(clip.id, trackId);
+            initClipDrag(e, clip, trackId, clipEl);
+          });
+
+          // Trimming handles
+          const handleLeft = clipEl.querySelector('.clip-trim-left');
+          const handleRight = clipEl.querySelector('.clip-trim-right');
+
+          handleLeft.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            initClipTrim(e, clip, trackId, 'left');
+          });
+
+          handleRight.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            initClipTrim(e, clip, trackId, 'right');
+          });
+
+          lane.appendChild(clipEl);
+        });
+      });
+    }
+
+    // Clip Dragging (Horizontal moving along timeline)
+    function initClipDrag(e, clip, trackId, clipEl) {
+      const startX = e.clientX;
+      const initialStart = clip.start;
+      let hasMoved = false;
+
+      function onMouseMove(moveEvent) {
+        hasMoved = true;
+        // In RTL: moving mouse right (positive delta) decreases time, moving left (negative) increases time
+        const deltaX = moveEvent.clientX - startX;
+        const deltaTime = -(deltaX / state.pixelsPerSecond);
+        let newStart = initialStart + deltaTime;
+        if (newStart < 0) newStart = 0;
+
+        clip.start = newStart;
+        clipEl.style.right = (newStart * state.pixelsPerSecond) + 'px';
+      }
+
+      function onMouseUp() {
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+        if (hasMoved) {
+          pushHistory();
+          renderAllTimelineClips();
+          renderCurrentFrame();
+        }
+      }
+
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    }
+
+    // Clip Trimming (Adjust In/Out points)
+    function initClipTrim(e, clip, trackId, side) {
+      const startX = e.clientX;
+      const initialDuration = clip.duration;
+      const initialStart = clip.start;
+
+      function onMouseMove(moveEvent) {
+        const deltaX = moveEvent.clientX - startX;
+        const deltaTime = -(deltaX / state.pixelsPerSecond);
+
+        if (side === 'right') { // Trimming end (left in RTL)
+          let newDur = initialDuration - deltaTime;
+          if (newDur < 0.3) newDur = 0.3;
+          clip.duration = newDur;
+        } else { // Trimming start
+          let newStart = initialStart + deltaTime;
+          let newDur = initialDuration - deltaTime;
+          if (newStart >= 0 && newDur >= 0.3) {
+            clip.start = newStart;
+            clip.duration = newDur;
+          }
+        }
+        renderAllTimelineClips();
+      }
+
+      function onMouseUp() {
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+        pushHistory();
+        renderAllTimelineClips();
+        renderCurrentFrame();
+      }
+
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    }
+
+    // Drag and Drop from Playlist to Track lanes
+    function setupTimelineDropEvents() {
+      const lanes = document.querySelectorAll('.track-lane');
+      lanes.forEach(lane => {
+        lane.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          lane.style.background = '#253545';
+        });
+
+        lane.addEventListener('dragleave', () => {
+          lane.style.background = '#191919';
+        });
+
+        lane.addEventListener('drop', (e) => {
+          e.preventDefault();
+          lane.style.background = '#191919';
+          const mediaId = e.dataTransfer.getData('text/plain');
+          const trackId = lane.dataset.trackId;
+
+          // Calculate time dropped at based on RTL offset
+          const rect = lane.getBoundingClientRect();
+          // In RTL: lane right is 0s
+          const offsetXFromRight = rect.right - e.clientX;
+          const dropTime = Math.max(0, offsetXFromRight / state.pixelsPerSecond);
+
+          addClipToTrack(mediaId, trackId, dropTime);
+        });
+      });
+    }
+
+    /* ==========================================================================
+       RULER & PLAYHEAD
+       ========================================================================== */
+
+    function renderRuler() {
+      const width = state.totalDuration * state.pixelsPerSecond;
+      el.rulerCanvas.width = width;
+      el.rulerCanvas.height = 24;
+
+      rulerCtx.clearRect(0, 0, width, 24);
+      rulerCtx.fillStyle = '#202020';
+      rulerCtx.fillRect(0, 0, width, 24);
+
+      rulerCtx.strokeStyle = '#555';
+      rulerCtx.fillStyle = '#888';
+      rulerCtx.font = '10px monospace';
+      rulerCtx.textAlign = 'center';
+
+      // Step interval based on zoom
+      let step = 1;
+      if (state.pixelsPerSecond < 25) step = 5;
+      if (state.pixelsPerSecond < 10) step = 10;
+      if (state.pixelsPerSecond > 80) step = 0.5;
+
+      for (let sec = 0; sec <= state.totalDuration; sec += step) {
+        // In RTL: sec = 0 is on the right side of the ruler canvas
+        const xFromRight = sec * state.pixelsPerSecond;
+        const x = width - xFromRight;
+
+        const isMajor = (sec % (step * 5) === 0 || sec === 0);
+        const tickHeight = isMajor ? 12 : 6;
+
+        rulerCtx.beginPath();
+        rulerCtx.moveTo(x, 24);
+        rulerCtx.lineTo(x, 24 - tickHeight);
+        rulerCtx.stroke();
+
+        if (isMajor) {
+          const m = Math.floor(sec / 60);
+          const s = Math.floor(sec % 60);
+          const timeText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+          rulerCtx.fillText(timeText, x, 10);
+        }
+      }
+    }
+
+    function updatePlayheadUI() {
+      // In RTL: playhead offset from right is: 120px (track headers) + (currentTime * pps)
+      const offsetRight = 120 + (state.currentTime * state.pixelsPerSecond);
+      el.playheadLine.style.right = offsetRight + 'px';
+      el.timecodeDisplay.textContent = formatTimecode(state.currentTime, state.fps);
+    }
+
+    // Ruler scrubbing & Playhead dragging
+    function setTimeFromClientX(clientX) {
+      const wrapperRect = el.timelineWrapper.getBoundingClientRect();
+      // Distance from wrapper right edge minus 120px header
+      const xFromRight = wrapperRect.right - clientX - 120;
+      const targetTime = Math.max(0, xFromRight / state.pixelsPerSecond);
+      state.currentTime = targetTime;
+      updatePlayheadUI();
+      renderCurrentFrame();
+    }
+
+    el.timelineRuler.addEventListener('mousedown', (e) => {
+      setTimeFromClientX(e.clientX);
+
+      function onMouseMove(moveEvent) {
+        setTimeFromClientX(moveEvent.clientX);
+      }
+      function onMouseUp() {
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+      }
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    });
+
+    el.playheadHandle.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      function onMouseMove(moveEvent) {
+        setTimeFromClientX(moveEvent.clientX);
+      }
+      function onMouseUp() {
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+      }
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    });
+
+    /* ==========================================================================
+       CANVAS RENDERING ENGINE & FILTERS
+       ========================================================================== */
+
+    // Render current frame by compositing active tracks + filters
+    function renderCurrentFrame() {
+      // Clear black background
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, el.previewCanvas.width, el.previewCanvas.height);
+
+      const t = state.currentTime;
+
+      // Render order: V1 first (base), then V2 (overlay/text)
+      const renderTrackOrder = ['V1', 'V2'];
+
+      renderTrackOrder.forEach(trackId => {
+        const clips = state.tracks[trackId];
+        const activeClip = clips.find(c => t >= c.start && t < (c.start + c.duration));
+
+        if (activeClip) {
+          const media = state.playlist.find(m => m.id === activeClip.mediaId);
+          if (media) {
+            ctx.save();
+
+            // Calculate internal media time
+            const clipProgress = t - activeClip.start;
+            const mediaCurrentTime = activeClip.inPoint + clipProgress;
+
+            // Apply Filters (CSS Canvas Filter String)
+            let filterStr = '';
+            let overlayText = null;
+            let overlayTextColor = '#ffffff';
+            let overlayTextSize = 36;
+            let overlayTextX = 480;
+            let overlayTextY = 270;
+            let activeTextFilter = null;
+            let globalAlpha = 1.0;
+
+            activeClip.filters.forEach(f => {
+              if (f.type === 'brightness') {
+                filterStr += ` brightness(${f.value}%)`;
+              } else if (f.type === 'contrast') {
+                filterStr += ` contrast(${f.value}%)`;
+              } else if (f.type === 'grayscale') {
+                filterStr += ` grayscale(${f.value}%)`;
+              } else if (f.type === 'sepia') {
+                filterStr += ` sepia(${f.value || 100}%)`;
+              } else if (f.type === 'hue-rotate') {
+                filterStr += ` hue-rotate(${f.value || 90}deg)`;
+              } else if (f.type === 'fade') {
+                // Fade in / out calculation
+                const fadeInEnd = f.fadeIn || 1;
+                const fadeOutStart = activeClip.duration - (f.fadeOut || 1);
+                if (clipProgress < fadeInEnd) {
+                  globalAlpha *= (clipProgress / fadeInEnd);
+                } else if (clipProgress > fadeOutStart) {
+                  globalAlpha *= Math.max(0, (activeClip.duration - clipProgress) / (f.fadeOut || 1));
+                }
+              } else if (f.type === 'text') {
+                overlayText = f.text;
+                overlayTextColor = f.color || '#ffffff';
+                overlayTextSize = f.size || 36;
+                overlayTextX = (f.x !== undefined) ? f.x : 480;
+                overlayTextY = (f.y !== undefined) ? f.y : 270;
+                activeTextFilter = f;
+              }
+            });
+
+            ctx.filter = filterStr.trim() || 'none';
+            ctx.globalAlpha = Math.max(0, Math.min(1, globalAlpha));
+
+            // Apply Slide Transition clipping/offsets
+            let drawX = 0;
+            let drawY = 0;
+            const cWidth = el.previewCanvas.width;
+            const cHeight = el.previewCanvas.height;
+
+            activeClip.filters.forEach(f => {
+              if (f.type === 'transition') {
+                const dur = f.duration || 1.2;
+                const mode = f.mode || 'slide_right'; // slide_right, slide_left, slide_down, slide_up
+                const type = f.transType || 'in';    // in, out
+
+                let progress = 1;
+                if (type === 'in') {
+                  if (clipProgress < dur) {
+                    progress = Math.min(1, Math.max(0, clipProgress / dur));
+                  }
+                } else if (type === 'out') {
+                  const outStart = activeClip.duration - dur;
+                  if (clipProgress > outStart) {
+                    progress = Math.min(1, Math.max(0, (activeClip.duration - clipProgress) / dur));
+                  }
+                }
+
+                // Smooth cubic easing
+                const ease = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+                if (mode === 'slide_right') { // من اليمين إلى اليسار
+                  drawX = (1 - ease) * cWidth;
+                } else if (mode === 'slide_left') { // من اليسار إلى اليمين
+                  drawX = -(1 - ease) * cWidth;
+                } else if (mode === 'slide_down') { // من فوق إلى تحت
+                  drawY = -(1 - ease) * cHeight;
+                } else if (mode === 'slide_up') { // من تحت إلى فوق
+                  drawY = (1 - ease) * cHeight;
+                } else if (mode === 'wipe_right') { // مسح من اليمين لليسار
+                  ctx.beginPath();
+                  ctx.rect(cWidth * (1 - ease), 0, cWidth * ease, cHeight);
+                  ctx.clip();
+                } else if (mode === 'wipe_left') { // مسح من اليسار لليمين
+                  ctx.beginPath();
+                  ctx.rect(0, 0, cWidth * ease, cHeight);
+                  ctx.clip();
+                }
+              }
+            });
+
+            // Draw Media Frame with computed transition position
+            if (media.type === 'video') {
+              if (media.canvasFallback) {
+                // Synthesized video canvas
+                ctx.drawImage(media.canvasFallback, drawX, drawY, cWidth, cHeight);
+              } else if (media.element) {
+                // Sync video element time if not playing smoothly
+                if (!state.isPlaying && Math.abs(media.element.currentTime - mediaCurrentTime) > 0.1) {
+                  media.element.currentTime = mediaCurrentTime % media.duration;
+                }
+                try {
+                  ctx.drawImage(media.element, drawX, drawY, cWidth, cHeight);
+                } catch (err) {
+                  // Element not ready, draw placeholder
+                  drawPlaceholder(media.name);
+                }
+              }
+            } else if (media.type === 'image') {
+              if (media.element && media.element.complete) {
+                ctx.drawImage(media.element, drawX, drawY, cWidth, cHeight);
+              }
+            }
+
+            // Restore canvas filter for text overlay
+            ctx.filter = 'none';
+
+            // Draw Simple Text Filter (with interactive draggable bounding box)
+            if (overlayText) {
+              const actualSize = (activeTextFilter && activeTextFilter.size) ? activeTextFilter.size : overlayTextSize;
+              ctx.font = `bold ${actualSize}px "Cairo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              
+              const metrics = ctx.measureText(overlayText);
+              const naturalWidth = Math.max(120, metrics.width + 40);
+              const naturalHeight = Math.max(50, actualSize * 1.5 + 20);
+
+              // Use custom width & height if user has resized the box, otherwise natural size
+              const boxW = (activeTextFilter.boxW !== undefined) ? activeTextFilter.boxW : naturalWidth;
+              const boxH = (activeTextFilter.boxH !== undefined) ? activeTextFilter.boxH : naturalHeight;
+
+              // Store text bounding box for mouse drag interaction
+              currentTextBounds = {
+                filter: activeTextFilter,
+                x: overlayTextX - (boxW / 2),
+                y: overlayTextY - (boxH / 2),
+                w: boxW,
+                h: boxH
+              };
+
+              // Draw dashed selection rectangle like Shotcut text filter (only when not exporting)
+              if (!isExportRendering) {
+                ctx.save();
+                ctx.strokeStyle = '#ff9800';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([6, 4]);
+                ctx.strokeRect(currentTextBounds.x, currentTextBounds.y, currentTextBounds.w, currentTextBounds.h);
+                
+                // Draw 8 interactive resize handles (4 corners + 4 edges)
+                const handles = [
+                  { id: 'nw', x: currentTextBounds.x, y: currentTextBounds.y },
+                  { id: 'ne', x: currentTextBounds.x + currentTextBounds.w, y: currentTextBounds.y },
+                  { id: 'sw', x: currentTextBounds.x, y: currentTextBounds.y + currentTextBounds.h },
+                  { id: 'se', x: currentTextBounds.x + currentTextBounds.w, y: currentTextBounds.y + currentTextBounds.h },
+                  { id: 'n',  x: currentTextBounds.x + currentTextBounds.w / 2, y: currentTextBounds.y },
+                  { id: 's',  x: currentTextBounds.x + currentTextBounds.w / 2, y: currentTextBounds.y + currentTextBounds.h },
+                  { id: 'w',  x: currentTextBounds.x, y: currentTextBounds.y + currentTextBounds.h / 2 },
+                  { id: 'e',  x: currentTextBounds.x + currentTextBounds.w, y: currentTextBounds.y + currentTextBounds.h / 2 }
+                ];
+
+                ctx.fillStyle = '#ff9800';
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([]);
+                handles.forEach(h => {
+                  ctx.fillRect(h.x - 7, h.y - 7, 14, 14);
+                  ctx.strokeRect(h.x - 7, h.y - 7, 14, 14);
+                });
+                ctx.restore();
+              }
+
+              // Draw text with shadow
+              ctx.fillStyle = overlayTextColor;
+              ctx.shadowColor = 'rgba(0,0,0,0.9)';
+              ctx.shadowBlur = 8;
+              ctx.fillText(overlayText, overlayTextX, overlayTextY);
+              ctx.shadowBlur = 0;
+            }
+
+            ctx.restore();
+          }
+        }
+      });
+
+      // Show indicator when timeline is empty
+      const totalClips = state.tracks.V1.length + state.tracks.V2.length;
+      if (totalClips === 0) {
+        ctx.fillStyle = '#666';
+        ctx.font = '16px var(--font-family)';
+        ctx.textAlign = 'center';
+        ctx.fillText('الخط الزمني فارغ. أضف مقطعاً من قائمة التشغيل للبدء.', el.previewCanvas.width / 2, el.previewCanvas.height / 2);
+      }
+    }
+
+    function drawPlaceholder(title) {
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(0, 0, el.previewCanvas.width, el.previewCanvas.height);
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '20px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`جاري تحميل الإطار: ${title}`, el.previewCanvas.width / 2, el.previewCanvas.height / 2);
+    }
+
+    /* ==========================================================================
+       PLAYBACK LOOP
+       ========================================================================== */
+
+    let lastFrameTime = performance.now();
+
+    function playbackLoop(now) {
+      if (!state.isPlaying) return;
+
+      const delta = (now - lastFrameTime) / 1000;
+      lastFrameTime = now;
+
+      state.currentTime += delta;
+      if (state.currentTime > state.totalDuration) {
+        state.currentTime = 0;
+        pausePlayback();
+      }
+
+      updatePlayheadUI();
+      renderCurrentFrame();
+
+      requestAnimationFrame(playbackLoop);
+    }
+
+    function startPlayback() {
+      state.isPlaying = true;
+      lastFrameTime = performance.now();
+      el.btnPlayPause.textContent = '⏸';
+      el.btnPlayPause.title = 'إيقاف مؤقت (Space)';
+
+      // Trigger playing on active media elements
+      ['V1', 'V2', 'A1'].forEach(trackId => {
+        state.tracks[trackId].forEach(clip => {
+          const media = state.playlist.find(m => m.id === clip.mediaId);
+          if (media && media.element && typeof media.element.play === 'function') {
+            if (state.currentTime >= clip.start && state.currentTime < clip.start + clip.duration) {
+              media.element.currentTime = clip.inPoint + (state.currentTime - clip.start);
+              media.element.play().catch(() => {});
+            }
+          }
+        });
+      });
+
+      requestAnimationFrame(playbackLoop);
+    }
+
+    function pausePlayback() {
+      state.isPlaying = false;
+      el.btnPlayPause.textContent = '▶';
+      el.btnPlayPause.title = 'تشغيل (Space)';
+
+      // Pause all media elements
+      state.playlist.forEach(m => {
+        if (m.element && typeof m.element.pause === 'function') {
+          m.element.pause();
+        }
+      });
+    }
+
+    function togglePlayPause() {
+      if (state.isPlaying) pausePlayback();
+      else startPlayback();
+    }
+
+    /* ==========================================================================
+       FILTERS MANAGEMENT UI
+       ========================================================================== */
+
+    function getSelectedClip() {
+      if (!state.selectedClipId || !state.selectedTrackId) return null;
+      return state.tracks[state.selectedTrackId].find(c => c.id === state.selectedClipId);
+    }
+
+    function renderFiltersPanel() {
+      const clip = getSelectedClip();
+      el.filtersContainer.innerHTML = '';
+
+      if (!clip) {
+        el.selectedClipLabel.textContent = 'لا يوجد مقطع محدد';
+        el.filtersContainer.innerHTML = `
+          <div style="color: #777; text-align: center; margin-top: 30px;">
+            حدد مقطعاً في الخط الزمني (Timeline) لتعديل أو إضافة الفلاتر عليه.
+          </div>
+        `;
+        return;
+      }
+
+      el.selectedClipLabel.textContent = `المقطع: ${clip.name}`;
+
+      if (clip.filters.length === 0) {
+        el.filtersContainer.innerHTML = `
+          <div style="color: #777; text-align: center; margin-top: 20px;">
+            لا توجد فلاتر مطبقة على هذا المقطع.<br>
+            استخدم القائمة أعلاه لإضافة فلتر جديد.
+          </div>
+        `;
+        return;
+      }
+
+      clip.filters.forEach((filter, index) => {
+        const card = document.createElement('div');
+        card.className = 'filter-card';
+
+        let innerContent = '';
+        if (filter.type === 'text') {
+          innerContent = `
+            <div class="filter-card-head">
+              <span>نص بسيط (Text: Simple)</span>
+              <button class="modal-close btn-del-filter" data-index="${index}">&times;</button>
+            </div>
+            <div style="font-size:10px; color:#ff9800; margin-bottom:4px;">💡 يمكنك سحب النص بالماوس مباشرة داخل شاشة المعاينة!</div>
+            <div class="filter-control-row">
+              <label>النص المعروض:</label>
+              <input type="text" class="input-filter-text" value="${filter.text || 'شوت كت'}">
+            </div>
+            <div class="filter-control-row">
+              <label>حجم الخط (Size): <span>${filter.size || 36}px</span></label>
+              <input type="range" class="input-filter-size" min="16" max="90" value="${filter.size || 36}">
+            </div>
+            <div class="filter-control-row">
+              <label>لون الخط (Color):</label>
+              <input type="color" class="input-filter-color" value="${filter.color || '#ffffff'}">
+            </div>
+            <div style="display:flex; gap:6px; margin-top:4px;">
+              <div class="filter-control-row" style="flex:1;">
+                <label>الموقع الأفقي X:</label>
+                <input type="number" class="input-filter-pos-x" min="0" max="960" value="${filter.x !== undefined ? filter.x : 480}">
+              </div>
+              <div class="filter-control-row" style="flex:1;">
+                <label>الموقع الرأسي Y:</label>
+                <input type="number" class="input-filter-pos-y" min="0" max="540" value="${filter.y !== undefined ? filter.y : 270}">
+              </div>
+            </div>
+          `;
+        } else if (filter.type === 'brightness') {
+          innerContent = `
+            <div class="filter-card-head">
+              <span>السطوع (Brightness)</span>
+              <button class="modal-close btn-del-filter" data-index="${index}">&times;</button>
+            </div>
+            <div class="filter-control-row">
+              <label>النسبة: <span>${filter.value}%</span></label>
+              <input type="range" class="input-filter-val" min="20" max="250" value="${filter.value}">
+            </div>
+          `;
+        } else if (filter.type === 'contrast') {
+          innerContent = `
+            <div class="filter-card-head">
+              <span>التباين (Contrast)</span>
+              <button class="modal-close btn-del-filter" data-index="${index}">&times;</button>
+            </div>
+            <div class="filter-control-row">
+              <label>النسبة: <span>${filter.value}%</span></label>
+              <input type="range" class="input-filter-val" min="20" max="250" value="${filter.value}">
+            </div>
+          `;
+        } else if (filter.type === 'grayscale') {
+          innerContent = `
+            <div class="filter-card-head">
+              <span>التدرج الرمادي (Grayscale)</span>
+              <button class="modal-close btn-del-filter" data-index="${index}">&times;</button>
+            </div>
+            <div class="filter-control-row">
+              <label>شدة التأثير: <span>${filter.value}%</span></label>
+              <input type="range" class="input-filter-val" min="0" max="100" value="${filter.value}">
+            </div>
+          `;
+        } else if (filter.type === 'sepia') {
+          innerContent = `
+            <div class="filter-card-head">
+              <span>مرشح البني الداكن (Sepia Tone)</span>
+              <button class="modal-close btn-del-filter" data-index="${index}">&times;</button>
+            </div>
+            <div class="filter-control-row">
+              <label>شدة التأثير الكلاسيكي: <span>${filter.value}%</span></label>
+              <input type="range" class="input-filter-val" min="0" max="100" value="${filter.value}">
+            </div>
+          `;
+        } else if (filter.type === 'hue-rotate') {
+          innerContent = `
+            <div class="filter-card-head">
+              <span>تدرج الألوان (Hue Rotate)</span>
+              <button class="modal-close btn-del-filter" data-index="${index}">&times;</button>
+            </div>
+            <div class="filter-control-row">
+              <label>زاوية تدرج الألوان: <span>${filter.value}°</span></label>
+              <input type="range" class="input-filter-val" min="0" max="360" value="${filter.value}">
+            </div>
+          `;
+        } else if (filter.type === 'fade') {
+          innerContent = `
+            <div class="filter-card-head">
+              <span>تلاشي للداخل / للخارج (Fade)</span>
+              <button class="modal-close btn-del-filter" data-index="${index}">&times;</button>
+            </div>
+            <div class="filter-control-row">
+              <label>تلاشي للداخل (Fade In): <span>${filter.fadeIn} ثانية</span></label>
+              <input type="range" class="input-fade-in" min="0" max="3" step="0.2" value="${filter.fadeIn}">
+            </div>
+            <div class="filter-control-row">
+              <label>تلاشي للخارج (Fade Out): <span>${filter.fadeOut} ثانية</span></label>
+              <input type="range" class="input-fade-out" min="0" max="3" step="0.2" value="${filter.fadeOut}">
+            </div>
+          `;
+        } else if (filter.type === 'transition') {
+          innerContent = `
+            <div class="filter-card-head">
+              <span>تأثير انتقالي حركي (Slide Transition)</span>
+              <button class="modal-close btn-del-filter" data-index="${index}">&times;</button>
+            </div>
+            <div class="filter-control-row">
+              <label>اتجاه الحركة الانتقالية:</label>
+              <select class="input-trans-mode" style="background:#141414; color:#fff; border:1px solid #333; padding:5px; border-radius:3px;">
+                <option value="slide_right" ${filter.mode === 'slide_right' ? 'selected' : ''}>من اليمين إلى اليسار (Slide from Right)</option>
+                <option value="slide_left" ${filter.mode === 'slide_left' ? 'selected' : ''}>من اليسار إلى اليمين (Slide from Left)</option>
+                <option value="slide_down" ${filter.mode === 'slide_down' ? 'selected' : ''}>من فوق إلى تحت (Slide from Top)</option>
+                <option value="slide_up" ${filter.mode === 'slide_up' ? 'selected' : ''}>من تحت إلى فوق (Slide from Bottom)</option>
+                <option value="wipe_right" ${filter.mode === 'wipe_right' ? 'selected' : ''}>مسح تدريجي من اليمين (Wipe Right)</option>
+                <option value="wipe_left" ${filter.mode === 'wipe_left' ? 'selected' : ''}>مسح تدريجي من اليسار (Wipe Left)</option>
+              </select>
+            </div>
+            <div class="filter-control-row">
+              <label>موضع التأثير:</label>
+              <select class="input-trans-type" style="background:#141414; color:#fff; border:1px solid #333; padding:5px; border-radius:3px;">
+                <option value="in" ${filter.transType === 'in' ? 'selected' : ''}>دخول عند بداية المقطع (Transition In)</option>
+                <option value="out" ${filter.transType === 'out' ? 'selected' : ''}>خروج عند نهاية المقطع (Transition Out)</option>
+              </select>
+            </div>
+            <div class="filter-control-row">
+              <label>مدة التأثير: <span>${filter.duration || 1.2} ثانية</span></label>
+              <input type="range" class="input-trans-dur" min="0.3" max="3" step="0.1" value="${filter.duration || 1.2}">
+            </div>
+          `;
+        }
+
+        card.innerHTML = innerContent;
+
+        // Delete filter listener
+        card.querySelector('.btn-del-filter').addEventListener('click', () => {
+          clip.filters.splice(index, 1);
+          renderFiltersPanel();
+          renderCurrentFrame();
+        });
+
+        // Input change listeners
+        if (filter.type === 'text') {
+          const txtInp = card.querySelector('.input-filter-text');
+          const sizeInp = card.querySelector('.input-filter-size');
+          const colInp = card.querySelector('.input-filter-color');
+
+          txtInp.addEventListener('input', (e) => {
+            filter.text = e.target.value;
+            renderCurrentFrame();
+          });
+          sizeInp.addEventListener('input', (e) => {
+            filter.size = parseInt(e.target.value);
+            e.target.previousElementSibling.querySelector('span').textContent = filter.size + 'px';
+            renderCurrentFrame();
+          });
+          colInp.addEventListener('input', (e) => {
+            filter.color = e.target.value;
+            renderCurrentFrame();
+          });
+
+          const posXInp = card.querySelector('.input-filter-pos-x');
+          const posYInp = card.querySelector('.input-filter-pos-y');
+          if (posXInp && posYInp) {
+            posXInp.addEventListener('input', (e) => {
+              filter.x = parseInt(e.target.value) || 0;
+              renderCurrentFrame();
+            });
+            posYInp.addEventListener('input', (e) => {
+              filter.y = parseInt(e.target.value) || 0;
+              renderCurrentFrame();
+            });
+          }
+        } else if (['brightness', 'contrast', 'grayscale', 'sepia', 'hue-rotate'].includes(filter.type)) {
+          const valInp = card.querySelector('.input-filter-val');
+          valInp.addEventListener('input', (e) => {
+            filter.value = parseInt(e.target.value);
+            e.target.previousElementSibling.querySelector('span').textContent = filter.value + '%';
+            renderCurrentFrame();
+          });
+        } else if (filter.type === 'fade') {
+          const inInp = card.querySelector('.input-fade-in');
+          const outInp = card.querySelector('.input-fade-out');
+
+          inInp.addEventListener('input', (e) => {
+            filter.fadeIn = parseFloat(e.target.value);
+            e.target.previousElementSibling.querySelector('span').textContent = filter.fadeIn + ' ثانية';
+            renderCurrentFrame();
+          });
+          outInp.addEventListener('input', (e) => {
+            filter.fadeOut = parseFloat(e.target.value);
+            e.target.previousElementSibling.querySelector('span').textContent = filter.fadeOut + ' ثانية';
+            renderCurrentFrame();
+          });
+        } else if (filter.type === 'transition') {
+          const modeSel = card.querySelector('.input-trans-mode');
+          const typeSel = card.querySelector('.input-trans-type');
+          const durInp = card.querySelector('.input-trans-dur');
+
+          modeSel.addEventListener('change', (e) => {
+            filter.mode = e.target.value;
+            renderCurrentFrame();
+          });
+          typeSel.addEventListener('change', (e) => {
+            filter.transType = e.target.value;
+            renderCurrentFrame();
+          });
+          durInp.addEventListener('input', (e) => {
+            filter.duration = parseFloat(e.target.value);
+            e.target.previousElementSibling.querySelector('span').textContent = filter.duration + ' ثانية';
+            renderCurrentFrame();
+          });
+        }
+
+        el.filtersContainer.appendChild(card);
+      });
+    }
+
+    // Add Filter to selected clip
+    el.selectNewFilter.addEventListener('change', (e) => {
+      const type = e.target.value;
+      if (!type) return;
+
+      const clip = getSelectedClip();
+      if (!clip) {
+        showToast("حدد مقطعاً أولاً لإضافة الفلتر إليه");
+        e.target.value = '';
+        return;
+      }
+
+      pushHistory();
+
+      let newF = null;
+      if (type === 'text') newF = { type: 'text', text: 'نص تدريبي جديد', size: 38, color: '#ffea00', x: 480, y: 270 };
+      else if (type === 'brightness') newF = { type: 'brightness', value: 130 };
+      else if (type === 'contrast') newF = { type: 'contrast', value: 140 };
+      else if (type === 'grayscale') newF = { type: 'grayscale', value: 100 };
+      else if (type === 'sepia') newF = { type: 'sepia', value: 85 };
+      else if (type === 'hue-rotate') newF = { type: 'hue-rotate', value: 120 };
+      else if (type === 'fade') newF = { type: 'fade', fadeIn: 1.0, fadeOut: 1.0 };
+      else if (type === 'transition') newF = { type: 'transition', mode: 'slide_right', transType: 'in', duration: 1.2 };
+
+      if (newF) {
+        clip.filters.push(newF);
+        renderFiltersPanel();
+        renderCurrentFrame();
+        state.lab.addedFilter = true;
+        checkLabGoals();
+        showToast("تم تطبيق الفلتر على المقطع بنجاح ✨");
+      }
+
+      e.target.value = '';
+    });
+
+    /* ==========================================================================
+       EXPORT SIMULATION
+       ========================================================================== */
+
+    // Global flag so text bounding box is hidden during video export rendering
+    let isExportRendering = false;
+
+    async function startExportSimulation() {
+      const totalClips = state.tracks.V1.length + state.tracks.V2.length + state.tracks.A1.length;
+      if (totalClips === 0) {
+        showToast("الخط الزمني فارغ! أضف مقاطع أولاً قبل التصدير.");
+        return;
+      }
+
+      // Stop any existing playback
+      pausePlayback();
+
+      el.btnStartExport.disabled = true;
+      el.exportProgressWrap.style.display = 'block';
+      el.exportProgressBar.style.width = '0%';
+      el.exportStatusText.textContent = 'جاري تهيئة مسار الرندرة وتسجيل الفيديو...';
+
+      const format = document.getElementById('exportFormat').value;
+      const fps = parseInt(document.getElementById('exportFps').value) || 30;
+
+      // Calculate timeline duration containing clips
+      let maxEnd = 0;
+      ['V1', 'V2', 'A1'].forEach(t => {
+        state.tracks[t].forEach(c => {
+          if (c.start + c.duration > maxEnd) maxEnd = c.start + c.duration;
+        });
+      });
+      maxEnd = Math.max(3, maxEnd);
+
+      const origTime = state.currentTime;
+      isExportRendering = true;
+
+      // Set up MediaRecorder on preview canvas stream
+      let mediaRecorder = null;
+      let recordedChunks = [];
+      let stream = null;
+
+      try {
+        stream = el.previewCanvas.captureStream(fps);
+        const mimeTypes = [
+          'video/webm;codecs=vp9',
+          'video/webm;codecs=vp8',
+          'video/webm',
+          'video/mp4'
+        ];
+        let chosenMime = '';
+        for (let m of mimeTypes) {
+          if (MediaRecorder.isTypeSupported(m)) {
+            chosenMime = m;
+            break;
+          }
+        }
+        mediaRecorder = new MediaRecorder(stream, chosenMime ? { mimeType: chosenMime } : undefined);
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+        };
+        mediaRecorder.start(100);
+      } catch (err) {
+        console.warn("MediaRecorder captureStream fallback:", err);
+      }
+
+      const totalFrames = Math.round(maxEnd * fps);
+      let frameIndex = 0;
+
+      // Sequential frame-by-frame rendering loop
+      function renderExportStep() {
+        if (frameIndex <= totalFrames) {
+          const t = (frameIndex / totalFrames) * maxEnd;
+          state.currentTime = t;
+          updatePlayheadUI();
+          renderCurrentFrame();
+
+          const pct = Math.round((frameIndex / totalFrames) * 100);
+          el.exportProgressBar.style.width = pct + '%';
+          el.exportStatusText.textContent = `جاري تصدير الإطارات: ${frameIndex} / ${totalFrames} (${pct}%)`;
+
+          frameIndex++;
+          // Yield to UI to avoid blocking
+          setTimeout(renderExportStep, 1000 / fps);
+        } else {
+          // Finished rendering
+          el.exportStatusText.textContent = 'تم اكتمال الرندرة! جاري تجميع ملف الفيديو...';
+          isExportRendering = false;
+
+          if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.onstop = () => {
+              const videoBlob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'video/webm' });
+              downloadBlob(videoBlob, format);
+            };
+            mediaRecorder.stop();
+          } else {
+            // Fallback for very old browsers: export high-res snapshot
+            el.previewCanvas.toBlob((blob) => {
+              downloadBlob(blob, 'png');
+            });
+          }
+        }
+      }
+
+      function downloadBlob(blob, ext) {
+        const url = URL.createObjectURL(blob);
+        const dlLink = document.createElement('a');
+        dlLink.href = url;
+        // Keep extension clean: use .webm or .mp4
+        const fileExt = (ext === 'mp4' && !blob.type.includes('mp4')) ? 'webm' : ext;
+        dlLink.download = `مشروع_شوت_كت_المصدر.${fileExt}`;
+        document.body.appendChild(dlLink);
+        dlLink.click();
+        document.body.removeChild(dlLink);
+
+        state.currentTime = origTime;
+        updatePlayheadUI();
+        renderCurrentFrame();
+
+        state.lab.exportedProject = true;
+        checkLabGoals();
+
+        showToast("🎉 تم حفظ وتصدير ملف الفيديو بنجاح ويمكن تشغيله مباشرة في أي مشغل!");
+        el.btnStartExport.disabled = false;
+        el.exportModal.classList.remove('show');
+      }
+
+      renderExportStep();
+    }
+
+    /* ==========================================================================
+       UI EVENT LISTENERS & SHORTCUTS
+       ========================================================================== */
+
+    // Top Toolbar File open
+    el.btnOpenFile.addEventListener('click', () => el.fileInput.click());
+    el.fileInput.addEventListener('change', (e) => handleFileImport(e.target.files));
+
+    // Save project JSON
+    el.btnSaveProject.addEventListener('click', () => {
+      const projectData = {
+        name: 'Shotcut Lab Project',
+        timestamp: new Date().toISOString(),
+        tracks: state.tracks,
+        totalDuration: state.totalDuration
+      };
+      const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'مشروع_شوت_كت.mlt.json';
+      a.click();
+      showToast("تم حفظ ملف المشروع محلياً");
+    });
+
+    // Undo
+    el.btnUndo.addEventListener('click', undo);
+
+    // Panel switching
+    el.panelTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        el.panelTabs.forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel-body').forEach(b => b.classList.remove('active'));
+
+        tab.classList.add('active');
+        const targetId = tab.dataset.tab;
+        document.getElementById(targetId).classList.add('active');
+      });
+    });
+
+    el.btnTogglePlaylist.addEventListener('click', () => {
+      el.panelTabs[0].click();
+    });
+
+    el.btnToggleFilters.addEventListener('click', () => {
+      el.panelTabs[1].click();
+    });
+
+    // Lab Drawer
+    el.btnToggleLab.addEventListener('click', () => {
+      el.labDrawer.classList.toggle('open');
+    });
+    el.btnCloseLab.addEventListener('click', () => {
+      el.labDrawer.classList.remove('open');
+    });
+
+    // Sample video button
+    el.btnAddSampleVideo.addEventListener('click', () => {
+      const demo = createDemoVideo();
+      addMediaToPlaylist(demo);
+    });
+
+    // Sample image button
+    el.btnAddSampleImage.addEventListener('click', () => {
+      const demoImg = createDemoImage();
+      addMediaToPlaylist(demoImg);
+    });
+
+    // Clear playlist
+    el.btnClearPlaylist.addEventListener('click', () => {
+      if (confirm("هل تريد تفريغ قائمة التشغيل؟")) {
+        state.playlist = [];
+        renderPlaylist();
+      }
+    });
+
+    // Drag and drop onto playlist drop zone
+    el.playlistDropZone.addEventListener('click', () => el.fileInput.click());
+    el.playlistDropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      el.playlistDropZone.style.borderColor = 'var(--accent)';
+    });
+    el.playlistDropZone.addEventListener('dragleave', () => {
+      el.playlistDropZone.style.borderColor = '#333';
+    });
+    el.playlistDropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      el.playlistDropZone.style.borderColor = '#333';
+      handleFileImport(e.dataTransfer.files);
+    });
+
+    // Timeline control buttons
+    el.tlBtnAddTrack.addEventListener('click', () => {
+      if (state.playlist.length > 0) {
+        addClipToTrack(state.playlist[0].id, 'V1');
+      } else {
+        showToast("يرجى استيراد فيديو في قائمة التشغيل أولاً");
+      }
+    });
+
+    el.tlBtnSplit.addEventListener('click', splitCurrentClip);
+    el.tlBtnDelete.addEventListener('click', deleteCurrentClip);
+
+    // Zoom timeline
+    el.tlZoomSlider.addEventListener('input', (e) => {
+      state.pixelsPerSecond = parseInt(e.target.value);
+      renderAllTimelineClips();
+      updatePlayheadUI();
+    });
+
+    // Interactive Canvas: Drag text filter anywhere on video/image preview
+    function getCanvasCoords(e) {
+      const rect = el.previewCanvas.getBoundingClientRect();
+      const scaleX = el.previewCanvas.width / rect.width;
+      const scaleY = el.previewCanvas.height / rect.height;
+      return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
+      };
+    }
+
+    function getHandleAtPoint(pt, bounds) {
+      if (!bounds) return null;
+      const b = bounds;
+      // Generous hit tolerance (20px) so student can easily grab the corners
+      const hSize = 20;
+      const handles = [
+        { id: 'nw', x: b.x, y: b.y, cursor: 'nwse-resize' },
+        { id: 'ne', x: b.x + b.w, y: b.y, cursor: 'nesw-resize' },
+        { id: 'sw', x: b.x, y: b.y + b.h, cursor: 'nesw-resize' },
+        { id: 'se', x: b.x + b.w, y: b.y + b.h, cursor: 'nwse-resize' },
+        { id: 'n',  x: b.x + b.w / 2, y: b.y, cursor: 'ns-resize' },
+        { id: 's',  x: b.x + b.w / 2, y: b.y + b.h, cursor: 'ns-resize' },
+        { id: 'w',  x: b.x, y: b.y + b.h / 2, cursor: 'ew-resize' },
+        { id: 'e',  x: b.x + b.w, y: b.y + b.h / 2, cursor: 'ew-resize' }
+      ];
+
+      for (let h of handles) {
+        if (Math.abs(pt.x - h.x) <= hSize && Math.abs(pt.y - h.y) <= hSize) {
+          return h;
+        }
+      }
+      return null;
+    }
+
+    el.previewCanvas.addEventListener('mousedown', (e) => {
+      if (!currentTextBounds || !currentTextBounds.filter) return;
+      const pt = getCanvasCoords(e);
+
+      // Check resize handle first
+      const handle = getHandleAtPoint(pt, currentTextBounds);
+      if (handle) {
+        isResizingText = true;
+        activeResizeHandle = handle.id;
+        initialResizeState = {
+          startX: pt.x,
+          startY: pt.y,
+          initialSize: Number(currentTextBounds.filter.size) || 36,
+          initialX: currentTextBounds.filter.x !== undefined ? currentTextBounds.filter.x : 480,
+          initialY: currentTextBounds.filter.y !== undefined ? currentTextBounds.filter.y : 270,
+          initialW: currentTextBounds.w,
+          initialH: currentTextBounds.h
+        };
+        el.previewCanvas.style.cursor = handle.cursor;
+        e.preventDefault();
+        return;
+      }
+
+      // Check text box drag
+      if (
+        pt.x >= currentTextBounds.x &&
+        pt.x <= (currentTextBounds.x + currentTextBounds.w) &&
+        pt.y >= currentTextBounds.y &&
+        pt.y <= (currentTextBounds.y + currentTextBounds.h)
+      ) {
+        isDraggingText = true;
+        textDragOffset.x = pt.x - (currentTextBounds.filter.x !== undefined ? currentTextBounds.filter.x : 480);
+        textDragOffset.y = pt.y - (currentTextBounds.filter.y !== undefined ? currentTextBounds.filter.y : 270);
+        el.previewCanvas.style.cursor = 'move';
+        e.preventDefault();
+      }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      // 1. Resizing text & bounding box from handles
+      if (isResizingText && currentTextBounds && currentTextBounds.filter && initialResizeState) {
+        const pt = getCanvasCoords(e);
+        const deltaX = pt.x - initialResizeState.startX;
+        const deltaY = pt.y - initialResizeState.startY;
+
+        // Calculate size change based on which handle was grabbed
+        let delta = 0;
+        if (activeResizeHandle === 'se') {
+          delta = (deltaX + deltaY) / 2;
+        } else if (activeResizeHandle === 'nw') {
+          delta = -(deltaX + deltaY) / 2;
+        } else if (activeResizeHandle === 'ne') {
+          delta = (deltaX - deltaY) / 2;
+        } else if (activeResizeHandle === 'sw') {
+          delta = (-deltaX + deltaY) / 2;
+        } else if (activeResizeHandle === 'e') {
+          delta = deltaX;
+        } else if (activeResizeHandle === 'w') {
+          delta = -deltaX;
+        } else if (activeResizeHandle === 's') {
+          delta = deltaY;
+        } else if (activeResizeHandle === 'n') {
+          delta = -deltaY;
+        }
+
+        // Direct responsive font size: 1 pixel drag = 0.5 font size point
+        const newFontSize = Math.max(16, Math.min(220, Math.round(initialResizeState.initialSize + (delta * 0.5))));
+        currentTextBounds.filter.size = newFontSize;
+
+        // Also scale box width and height smoothly with the font size
+        const ratio = newFontSize / initialResizeState.initialSize;
+        currentTextBounds.filter.boxW = Math.round(initialResizeState.initialW * ratio);
+        currentTextBounds.filter.boxH = Math.round(initialResizeState.initialH * ratio);
+
+        // Synchronize with filters panel controls
+        const sizeInp = document.querySelector('.input-filter-size');
+        if (sizeInp) {
+          sizeInp.value = newFontSize;
+          const labelSpan = sizeInp.previousElementSibling?.querySelector('span');
+          if (labelSpan) labelSpan.textContent = newFontSize + 'px';
+        }
+
+        renderCurrentFrame();
+        return;
+      }
+
+      // 2. Dragging text position
+      if (isDraggingText && currentTextBounds && currentTextBounds.filter) {
+        const pt = getCanvasCoords(e);
+        let newX = Math.round(pt.x - textDragOffset.x);
+        let newY = Math.round(pt.y - textDragOffset.y);
+
+        newX = Math.max(30, Math.min(el.previewCanvas.width - 30, newX));
+        newY = Math.max(20, Math.min(el.previewCanvas.height - 20, newY));
+
+        currentTextBounds.filter.x = newX;
+        currentTextBounds.filter.y = newY;
+
+        const posXInp = document.querySelector('.input-filter-pos-x');
+        const posYInp = document.querySelector('.input-filter-pos-y');
+        if (posXInp) posXInp.value = newX;
+        if (posYInp) posYInp.value = newY;
+
+        renderCurrentFrame();
+        return;
+      }
+
+      // 3. Hover cursor updates
+      if (currentTextBounds && !isDraggingText && !isResizingText) {
+        const pt = getCanvasCoords(e);
+        const handle = getHandleAtPoint(pt, currentTextBounds);
+        if (handle) {
+          el.previewCanvas.style.cursor = handle.cursor;
+        } else if (
+          pt.x >= currentTextBounds.x &&
+          pt.x <= (currentTextBounds.x + currentTextBounds.w) &&
+          pt.y >= currentTextBounds.y &&
+          pt.y <= (currentTextBounds.y + currentTextBounds.h)
+        ) {
+          el.previewCanvas.style.cursor = 'move';
+        } else {
+          el.previewCanvas.style.cursor = 'default';
+        }
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (isDraggingText || isResizingText) {
+        isDraggingText = false;
+        isResizingText = false;
+        activeResizeHandle = null;
+        initialResizeState = null;
+        el.previewCanvas.style.cursor = 'default';
+      }
+    });
+
+    // Player navigation controls
+    el.btnPlayPause.addEventListener('click', togglePlayPause);
+    el.btnGoStart.addEventListener('click', () => {
+      state.currentTime = 0;
+      updatePlayheadUI();
+      renderCurrentFrame();
+    });
+    el.btnGoEnd.addEventListener('click', () => {
+      state.currentTime = state.totalDuration;
+      updatePlayheadUI();
+      renderCurrentFrame();
+    });
+    el.btnStepBack.addEventListener('click', () => {
+      state.currentTime = Math.max(0, state.currentTime - (1 / state.fps));
+      updatePlayheadUI();
+      renderCurrentFrame();
+    });
+    el.btnStepForward.addEventListener('click', () => {
+      state.currentTime = Math.min(state.totalDuration, state.currentTime + (1 / state.fps));
+      updatePlayheadUI();
+      renderCurrentFrame();
+    });
+
+    // Export Modal Controls
+    el.btnExportModal.addEventListener('click', () => {
+      el.exportModal.classList.add('show');
+      el.exportProgressWrap.style.display = 'none';
+      el.exportStatusText.textContent = '';
+    });
+    el.btnCloseExport.addEventListener('click', () => el.exportModal.classList.remove('show'));
+    el.btnCancelExport.addEventListener('click', () => el.exportModal.classList.remove('show'));
+    el.btnStartExport.addEventListener('click', startExportSimulation);
+
+    // Keyboard Shortcuts (Shotcut Standard)
+    window.addEventListener('keydown', (e) => {
+      // Avoid shortcuts if typing in input
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlayPause();
+      } else if (e.code === 'KeyS') {
+        e.preventDefault();
+        splitCurrentClip();
+      } else if (e.code === 'Delete' || e.code === 'Backspace') {
+        e.preventDefault();
+        deleteCurrentClip();
+      } else if (e.code === 'ArrowLeft') {
+        // RTL forward or backward: standard frame step
+        e.preventDefault();
+        state.currentTime = Math.max(0, state.currentTime - (1 / state.fps));
+        updatePlayheadUI();
+        renderCurrentFrame();
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        state.currentTime = Math.min(state.totalDuration, state.currentTime + (1 / state.fps));
+        updatePlayheadUI();
+        renderCurrentFrame();
+      } else if (e.code === 'Home') {
+        state.currentTime = 0;
+        updatePlayheadUI();
+        renderCurrentFrame();
+      } else if (e.code === 'End') {
+        state.currentTime = state.totalDuration;
+        updatePlayheadUI();
+        renderCurrentFrame();
+      } else if (e.ctrlKey && e.code === 'KeyZ') {
+        e.preventDefault();
+        undo();
+      }
+    });
+
+    /* ==========================================================================
+       INITIALIZATION
+       ========================================================================== */
+
+    function init() {
+      setupTimelineDropEvents();
+      renderPlaylist();
+      renderAllTimelineClips();
+      updatePlayheadUI();
+      renderCurrentFrame();
+      checkLabGoals();
+
+      // Show warm welcome
+      showToast("مرحباً بك في محاكي Shotcut التعليمي للمختبرات المدرسية!");
+    }
+
+    // Run when ready
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
+
