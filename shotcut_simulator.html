@@ -84,6 +84,16 @@
       border-left: 1px solid var(--border-color);
       font-weight: bold;
       color: #fff;
+      font-size: 12px;
+    }
+    .app-brand .dev-link {
+      color: #fff;
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .app-brand .dev-link:hover {
+      color: var(--accent);
+      text-decoration: underline;
     }
     .app-brand .badge {
       background: var(--accent);
@@ -92,28 +102,6 @@
       font-weight: 800;
       padding: 2px 6px;
       border-radius: 3px;
-    }
-    .dev-credit {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 11px;
-      color: #aaa;
-      padding: 3px 8px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid #383838;
-      border-radius: 3px;
-      margin-left: 8px;
-    }
-    .dev-credit a {
-      color: var(--accent);
-      text-decoration: none;
-      font-weight: bold;
-      transition: color 0.15s, text-decoration 0.15s;
-    }
-    .dev-credit a:hover {
-      color: #fff;
-      text-decoration: underline;
     }
 
     .tb-btn {
@@ -923,8 +911,9 @@
 
   <!-- Top Toolbar -->
   <header class="toolbar">
-    <div class="app-brand">
-      <span>شوت كت</span>
+    <div class="app-brand" title="تواصل مع المطور عبر البريد الإلكتروني">
+      <span>تطوير:</span>
+      <a href="mailto:w.a.a2012@gmail.com" class="dev-link">عبدالرزاق المعلوي</a>
       <span class="badge">Shotcut التدريبي</span>
     </div>
 
@@ -963,12 +952,6 @@
     </button>
 
     <div style="flex: 1;"></div>
-
-    <!-- Developer Credit -->
-    <div class="dev-credit" title="تواصل مع المطور عبر البريد الإلكتروني">
-      <span>تطوير:</span>
-      <a href="mailto:w.a.a2012@gmail.com">عبدالرزاق المعلوي</a>
-    </div>
 
     <!-- Training Lab Mode Button -->
     <button class="tb-btn highlight" id="btnToggleLab">
